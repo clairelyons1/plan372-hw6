@@ -1,0 +1,109 @@
+---
+title: "Plan 372 HW 6"
+author: "Claire Lyons"
+format: html
+editor: visual
+---
+
+## Homework 6
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+data = read_csv(here::here("Data", "TS3_Raw_tree_data.csv"))
+head(data)
+```
+
+```{r}
+all(str_detect(data$City, "^[[:alpha:] ]+, [A-Z]{2}$"))
+```
+
+```{r}
+data[,c("City", "State")] = str_match(data$City, "^([[:alpha:] ]+), ([A-Z]{2})$")[,2:3]
+head(data)
+```
+
+## How many records are there in each state?
+
+```{r}
+state_counts = data |>
+  group_by(State) |>
+  summarize(count = n())
+
+head(state_counts)
+```
+
+```{r}
+ggplot(state_counts, aes(x=State, y=count)) +
+  geom_col()
+```
+
+## What cities did they collect data from in North and South Carolina?
+
+```{r}
+carolina_only = data |>
+  filter(State == "NC" | State == "SC")
+
+unique(carolina_only$City)
+```
+
+## What genus of trees has the largest crown diameter in North and South Carolina?
+
+```{r}
+all(str_detect(carolina_only$ScientificName, "^[[:alpha:]]+ [[:alpha:].]+$"))
+```
+
+```{r}
+carolina_only[,c("genus", "species")] = str_match(carolina_only$ScientificName, "^([[:alpha:]]+) ([[:alpha:].]+)$")[,2:3]
+head(carolina_only)
+```
+
+```{r}
+# the column name was giving me trouble when creating a summary table so I renamed it
+carolina_only = carolina_only |>
+  rename(avg_diameter = "AvgCdia (m)")
+
+
+genus_diameters = carolina_only |>
+  group_by(genus) |>
+  summarize(diameter = mean(avg_diameter)) |>
+  arrange(desc(diameter))
+
+head(genus_diameters)
+```
+
+The Quercus genus has the largest crown diameter in North and South Carolina.
+
+# Extra Credit
+
+## Are there differences in the average age of the different genera of trees in the dataset? 
+
+```{r}
+genus_ages = carolina_only |>
+  group_by(genus) |>
+  summarize(avg_age = mean(Age)) |>
+  arrange(desc(avg_age))
+
+head(genus_ages)
+```
+
+There are differences in the average age of different genera of trees in the data set. Conveniently, the Quercus is the oldest genus in the data set and also has the largest crown diameter. Aside from this, the Platanus and Carya genera also appear as some of the oldest in the data set with one of the top six largest crown diameters. This proves to me that age cannot ENTIRELY explain the results of the previous question, but it definitely does play a role.
+
+## Recommend a genera that produces a large crown quickly
+
+```{r}
+genus_age_diameter = carolina_only |>
+  group_by(genus) |>
+  summarize(avg_age = mean(Age), avg_diameter = mean(avg_diameter))
+
+ggplot(genus_age_diameter, aes(x=avg_age, y=avg_diameter, label = genus)) +
+  geom_point() + 
+  geom_label() + # learned from google, wanted to be able to identify genus labels on the scatterplot
+  labs(x= "Average Age", y = "Average Diameter")
+```
+
+To visualize this data, I created a summary table with the average age and diameter of each genera represented in the data set. I then graphed this on a scatterplot, with labels to help identify which genera is represented at each point. This made it very easy for me to visually identify a young genera with large crown diameters.
+
+Compared to other genera around its age, the Betula genera produces a large crown relatively quickly. Although it is in the younger 50% of the genera represented in this data set, only four genera have larger crown diameters.
